@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>CPU Job Scheduling</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="form-container" class="flex-form">
+        <div class="form-group">
+            <label for="job-number">Job #</label>
+            <input type="text" id="job-number" placeholder="Job #" required>
+        </div>
+        <div class="form-group">
+            <label for="arrival-time">Arrival Time</label>
+            <input type="number" id="arrival-time" placeholder="Arrival Time" min="0" required>
+        </div>
+        <div class="form-group">
+            <label for="burst-time">Burst Time</label>
+            <input type="number" id="burst-time" placeholder="Burst Time" min="0" required>
+        </div>
+        <div class="form-group">
+            <button id="add-job" type="button">Add Job</button>
+        </div>
+        <div class="form-group">
+            <label for="algorithm-select">Scheduling Algorithm</label>
+            <select id="algorithm-select">
+                <option value=""disabled selected>Select Algorithm</option>
+                <option value="sjf">Shortest-Job-First</option>
+                <option value="fcfs">First-Come-First-Serve</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="cpu-cores">Number of CPU cores</label>
+            <input type="number" id="cpu-cores" placeholder="Number of CPU cores" min="1" value="1" required>
+        </div>
+    </div>
+
+    <table id="jobs-table">
+        <thead>
+            <tr>
+                <th>Job #</th>
+                <th>Arrival Time</th>
+                <th>Burst Time</th>
+                <th>Start Time</th>
+                <th>End Time</th>
+                <th>Turn-Around Time</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody id="jobs-table-body">
+            <!-- Table rows will be dynamically inserted here -->
+        </tbody>
+    </table>
+
+    <div id="timeline-container">
+        <!-- Timeline graphic will be dynamically created here -->
+    </div>
+
+    <script src="scheduler.js"></script>
+</body>
+</html>

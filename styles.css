@@ -1,0 +1,136 @@
+/* Style input fields */
+input[type="text"],
+input[type="number"],
+select {
+  padding: 10px;
+  margin: 5px 0;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-sizing: border-box; /* Include padding and border in the element's total width and height */
+}
+
+/* Style the "Add Job" button */
+button {
+  padding: 10px 20px;
+  margin: 5px 0;
+  border: none;
+  border-radius: 4px;
+  background-color: #007bff; /* Bootstrap primary color */
+  color: white;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+button:hover {
+  background-color: #0056b3; /* Darker shade when hovered */
+}
+
+/* Flexbox form layout */
+.flex-form {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap; /* Allow form elements to wrap onto the next line on smaller screens */
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  margin-right: 10px; /* Add some space between form groups */
+}
+
+/* Style adjustments for form elements */
+.flex-form input[type="text"],
+.flex-form input[type="number"],
+.flex-form select {
+  width: auto; /* Allow inputs to shrink and grow as needed */
+  margin-bottom: 5px; /* Space below inputs */
+}
+
+.flex-form button {
+  padding: 10px 15px; /* Adjust padding for the button */
+}
+
+/* Ensure the form container does not exceed the width of its parent */
+#form-container {
+  max-width: 100%;
+  padding: 0 15px; /* Add padding to prevent content from touching the edges */
+}
+
+/* Add borders to table cells */
+#jobs-table {
+  border-collapse: collapse; /* Collapse borders so they don't double up */
+  width: 100%; /* Set table width */
+  margin-bottom: 20px; /* Add space below the table */
+}
+
+#jobs-table th,
+#jobs-table td {
+  border: 1px solid #000; /* Add border to table headers and cells */
+  padding: 8px; /* Add some padding for content inside cells */
+  text-align: left; /* Align text to the left */
+}
+
+/* Style the column headers with a blue background */
+#jobs-table thead th {
+  background-color: #0000FF; /* Set background color to blue */
+  color: #FFF; /* Set text color to white for better contrast */
+}
+
+/* Add padding and background to the timeline container */
+#timeline-container {
+  padding: 10px;
+  background-color: #f8f8f8; /* Light grey background for contrast */
+  border: 1px solid #ddd; /* Light grey border */
+  margin-top: 20px; /* Space above the timeline */
+}
+
+.timeline-header {
+  display: flex;
+  justify-content: start;
+  margin-bottom: 5px;
+}
+
+.time-slot {
+  width: 20px; /* Adjust as needed */
+  text-align: center;
+  display: inline-block;
+}
+
+.core-timeline {
+  display: flex;
+  align-items: center;
+  position: relative;
+  margin-bottom: 5px;
+}
+
+.core-label {
+  width: 50px; /* Adjust as needed */
+  text-align: right;
+  margin-right: 5px;
+  flex-shrink: 0; /* Prevent the label from shrinking */
+}
+
+.job-container {
+  flex-grow: 1; /* Allow the container to take up remaining space */
+  position: relative; /* Position job blocks relative to this container */
+  height: 20px; /* Adjust as needed */
+}
+
+.job-block {
+  position: absolute;
+  height: 100%; /* Take full height of the container */
+  line-height: 20px; /* Adjust as needed */
+  color: white;
+  text-align: center;
+  border: 1px solid black;
+  border-left: none; /* Remove left border to avoid double borders */
+}
+
+/* Style the timeline slots */
+.timeline-slot {
+  display: inline-block;
+  position: relative;
+  height: 20px;
+  border-left: 1px solid #ccc; /* Light grey border for the timeline slots */
+}
