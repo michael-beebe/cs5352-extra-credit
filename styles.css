@@ -127,10 +127,45 @@ button:hover {
   border-left: none; /* Remove left border to avoid double borders */
 }
 
+.timeline-header {
+  margin-left: 50px;
+}
+
 /* Style the timeline slots */
 .timeline-slot {
   display: inline-block;
   position: relative;
   height: 20px;
   border-left: 1px solid #ccc; /* Light grey border for the timeline slots */
+}
+
+.time-label {
+  position: absolute;
+  top: 100%; /* Position below the job block */
+  transform: translateY(5px); /* Slightly offset the label down */
+  background-color: #fff; /* White background */
+  padding: 2px 5px; /* Some padding around the text */
+  font-size: 12px; /* Smaller font size */
+  border: 1px solid #000; /* Black border */
+  white-space: nowrap; /* Prevent the text from wrapping */
+  user-select: none; /* Prevent text selection */
+}
+
+.timestamp-label {
+  position: absolute;
+  bottom: -20px; /* Position below the job blocks */
+  background-color: #fff; /* White background */
+  padding: 2px 5px; /* Some padding around the text */
+  font-size: 12px; /* Smaller font size */
+  border: 1px solid #000; /* Black border */
+  white-space: nowrap; /* Prevent the text from wrapping */
+  user-select: none; /* Prevent text selection */
+}
+
+.start-time {
+  margin-right: 5px; /* Space between the start time label and the job block */
+}
+
+.end-time {
+  margin-left: 5px; /* Space between the end time label and the job block */
 }

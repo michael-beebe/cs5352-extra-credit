@@ -114,10 +114,33 @@ function createTimelineGraphic() {
   const timelineContainer = document.getElementById('timeline-container');
   timelineContainer.innerHTML = ''; // Clear existing timeline
 
+  // Find the highest end time among all jobs
+  let maxEndTime = 0;
+  cores.forEach(core => {
+    core.jobs.forEach(job => {
+      if (job.endTime > maxEndTime) {
+        maxEndTime = job.endTime;
+      }
+    });
+  });
+
+  // Create timeline header and add time labels
+  const timelineHeader = document.createElement('div');
+  timelineHeader.classList.add('timeline-header');
+  for (let time = 0; time <= maxEndTime; time += 2) {
+    const timeLabel = document.createElement('div');
+    timeLabel.classList.add('time-slot');
+    timeLabel.textContent = time;
+    // Set the left position to align with the timeline scale (10px per time unit)
+    timeLabel.style.left = `${time * 10}px`;
+    timelineHeader.appendChild(timeLabel);
+  }
+  timelineContainer.appendChild(timelineHeader);
+
   cores.forEach((core, coreIndex) => {
     const coreDiv = document.createElement('div');
     coreDiv.classList.add('core-timeline');
-    
+
     // Create and append the core label to the coreDiv
     const coreLabel = document.createElement('div');
     coreLabel.textContent = `CPU-${coreIndex + 1}`;
@@ -136,6 +159,20 @@ function createTimelineGraphic() {
       jobDiv.style.width = `${job.burstTime * 10}px`;
       jobDiv.style.backgroundColor = getRandomColor();
       jobContainer.appendChild(jobDiv);
+      
+      // Create and append start time label
+      const startTimeLabel = document.createElement('span');
+      startTimeLabel.classList.add('time-label', 'start-time');
+      startTimeLabel.textContent = job.startTime;
+      startTimeLabel.style.left = `${job.startTime * 10}px`;
+      jobContainer.appendChild(startTimeLabel);
+
+      // Create and append end time label
+      const endTimeLabel = document.createElement('span');
+      endTimeLabel.classList.add('time-label', 'end-time');
+      endTimeLabel.textContent = job.endTime;
+      endTimeLabel.style.left = `${job.endTime * 10}px`;
+      jobContainer.appendChild(endTimeLabel);
     });
 
     coreDiv.appendChild(jobContainer);
