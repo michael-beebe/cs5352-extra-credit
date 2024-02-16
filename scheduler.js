@@ -77,17 +77,33 @@ function scheduleJobsMultiCore() {
   let originalJobsReference = jobs.slice();
 
   // Helper function to add or update queue states
-  function updateQueueStates(time, jobs) {
-    // Check if there's already a queue state for this time
-    let state = queueStates.find(s => s.time === time);
+  function updateQueueStates(currentTime) {
+    // Filter out jobs that have not arrived yet
+    let queue = jobs.filter(job => job.arrivalTime <= currentTime && job.startTime >= currentTime);
+    
+    // Update the queue state for the current time
+    let state = queueStates.find(s => s.time === currentTime);
     if (state) {
-      // Merge jobs with the existing queue
-      state.queue = [...new Set([...state.queue, ...jobs])];
+        state.queue = queue.map(job => job.id);
     } else {
-      // Create a new queue state
-      queueStates.push({ time: time, queue: [...jobs] });
+        queueStates.push({
+            time: currentTime,
+            queue: queue.map(job => job.id)
+        });
     }
   }
+  
+  // function updateQueueStates(time, jobs) {
+  //   // Check if there's already a queue state for this time
+  //   let state = queueStates.find(s => s.time === time);
+  //   if (state) {
+  //     // Merge jobs with the existing queue
+  //     state.queue = [...new Set([...state.queue, ...jobs])];
+  //   } else {
+  //     // Create a new queue state
+  //     queueStates.push({ time: time, queue: [...jobs] });
+  //   }
+  // }
 
   if (selectedAlgorithm === 'fcfs') {
     jobsToSchedule.forEach(job => {
@@ -103,10 +119,20 @@ function scheduleJobsMultiCore() {
       jobsToSchedule = jobsToSchedule.filter(j => j.id !== job.id);
 
       // Capture the current state of the queue
-      let currentQueue = jobsToSchedule.filter(j => j.arrivalTime <= coreWithEarliestTime.currentTime && !coreWithEarliestTime.jobs.includes(j)).map(j => j.id);
-      updateQueueStates(originalJob.startTime, currentQueue);
+      let currentJobs = cores.flatMap(core => core.jobs);
+      let currentQueue = jobsToSchedule.filter(j => j.arrivalTime < coreWithEarliestTime.currentTime && !currentJobs.includes(j)).map(j => j.id);
+      ////////////////////////////////////////////////////
+      // FIXME:
+      // updateQueueStates(originalJob.startTime, currentQueue);
+      cores.forEach(core => {
+        core.jobs.forEach(job => {
+            updateQueueStates(job.startTime);
+        });
+      });
+      ////////////////////////////////////////////////////
     });
-  } else if (selectedAlgorithm === 'sjf') {
+  }
+  else if (selectedAlgorithm === 'sjf') {
     while (jobsToSchedule.length > 0) {
       let coreWithEarliestTime = cores.reduce((earliest, current) => earliest.currentTime <= current.currentTime ? earliest : current);
       let availableJobs = jobsToSchedule.filter(j => j.arrivalTime <= coreWithEarliestTime.currentTime);
@@ -123,8 +149,17 @@ function scheduleJobsMultiCore() {
 
         // Update queue state
         let currentQueue = jobsToSchedule.filter(j => j.arrivalTime <= coreWithEarliestTime.currentTime).map(j => j.id);
-        updateQueueStates(originalJob.startTime, currentQueue);
-      } else {
+        ////////////////////////////////////////////////////
+        // FIXME:
+        // updateQueueStates(originalJob.startTime, currentQueue);
+        cores.forEach(core => {
+          core.jobs.forEach(job => {
+              updateQueueStates(job.startTime);
+          });
+        });
+        ////////////////////////////////////////////////////
+      }
+      else {
         // Advance time to next job's arrival if no jobs are available
         let nextJobArrival = Math.min(...jobsToSchedule.map(j => j.arrivalTime));
         coreWithEarliestTime.currentTime = nextJobArrival;
@@ -136,6 +171,7 @@ function scheduleJobsMultiCore() {
   updateUI();
   updateQueueStateTable();
 }
+////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Function to create a detailed timeline graphic
 function createTimelineGraphic() {
