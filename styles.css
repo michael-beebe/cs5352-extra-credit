@@ -169,3 +169,40 @@ button:hover {
 .end-time {
   margin-left: 5px; /* Space between the end time label and the job block */
 }
+
+#queue-state-container {
+  margin-top: 20px; /* Add some space above the queue state table for separation */
+}
+
+#queue-state-container table {
+  border-collapse: collapse; /* Collapse borders so they don't double up */
+  width: 100%; /* Set table width to fill container */
+  margin-bottom: 20px; /* Space below the table */
+}
+
+#queue-state-container th,
+#queue-state-container td {
+  border: 1px solid #000; /* Add border to table headers and cells */
+  padding: 8px; /* Add some padding for content inside cells */
+  text-align: left; /* Align text to the left */
+}
+
+/* Style the column headers with a consistent blue background */
+#queue-state-container thead th {
+  background-color: #0000FF; /* Set background color to blue */
+  color: #FFF; /* Set text color to white for better contrast */
+}
+
+/* Adjustments for consistent look and feel */
+#queue-state-container thead {
+  border-bottom: 2px solid #000; /* Stronger bottom border for the header */
+}
+
+#queue-state-container tbody tr:nth-child(odd) {
+  background-color: #f2f2f2; /* Light grey background for odd rows, for better readability */
+}
+
+/* Hover effect for rows */
+#queue-state-container tbody tr:hover {
+  background-color: #ddd; /* Slightly darker shade on hover for interactivity */
+}

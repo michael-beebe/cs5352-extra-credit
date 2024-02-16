@@ -30,6 +30,7 @@ let jobs = [];
 let cores = [];
 let selectedAlgorithm = ''; // No default algorithm
 let numberOfCores = 1; // Default to 1 core
+let queueStates = []; // Record of queue states at different times
 
 // Function to initialize cores
 function initializeCores(numCores) {
@@ -60,19 +61,15 @@ function removeJob(jobId) {
 
 // Function to schedule jobs across multiple cores
 function scheduleJobsMultiCore() {
-  // Reset and initialize cores
-  initializeCores(numberOfCores);
-  
-  // Sort jobs by arrival time initially for all algorithms
-  let jobsToSchedule = JSON.parse(JSON.stringify(jobs)).sort((a, b) => a.arrivalTime - b.arrivalTime);
+  initializeCores(numberOfCores); // Reset and initialize cores
+  queueStates = []; // Reset queue states before each scheduling
 
-  // Clear previous jobs from cores
+  let jobsToSchedule = JSON.parse(JSON.stringify(jobs)).sort((a, b) => a.arrivalTime - b.arrivalTime);
   cores.forEach(core => {
     core.jobs = [];
     core.currentTime = 0;
   });
 
-  // Handle FCFS scheduling
   if (selectedAlgorithm === 'fcfs') {
     jobsToSchedule.forEach(job => {
       let coreWithEarliestTime = cores.reduce((earliest, current) => earliest.currentTime <= current.currentTime ? earliest : current);
@@ -80,44 +77,39 @@ function scheduleJobsMultiCore() {
       job.endTime = job.startTime + job.burstTime;
       coreWithEarliestTime.currentTime = job.endTime;
       coreWithEarliestTime.jobs.push(job);
+      captureQueueState(coreWithEarliestTime.currentTime, jobsToSchedule.filter(j => j.arrivalTime <= coreWithEarliestTime.currentTime));
     });
   }
-
-  // Handle SJF scheduling
   else if (selectedAlgorithm === 'sjf') {
     while (jobsToSchedule.length > 0) {
       let coreWithEarliestTime = cores.reduce((earliest, current) => earliest.currentTime <= current.currentTime ? earliest : current);
+      let availableJobs = jobsToSchedule.filter(j => j.arrivalTime <= coreWithEarliestTime.currentTime);
 
-      // Find jobs that have arrived by the current time of the earliest core
-      let availableJobs = jobsToSchedule.filter(job => job.arrivalTime <= coreWithEarliestTime.currentTime);
+      if (availableJobs.length > 0) {
+        let job = availableJobs.sort((a, b) => a.burstTime - b.burstTime)[0]; // Select job with the shortest burst time
+        jobsToSchedule = jobsToSchedule.filter(j => j.id !== job.id); // Remove the chosen job from the pool
 
-      // If no jobs are available yet, advance the time to the next job's arrival
-      if (availableJobs.length === 0) {
-        let nextJobArrival = Math.min(...jobsToSchedule.map(job => job.arrivalTime));
-        coreWithEarliestTime.currentTime = nextJobArrival;
-        availableJobs = jobsToSchedule.filter(job => job.arrivalTime <= coreWithEarliestTime.currentTime);
+        job.startTime = Math.max(coreWithEarliestTime.currentTime, job.arrivalTime);
+        job.endTime = job.startTime + job.burstTime;
+        coreWithEarliestTime.currentTime = job.endTime;
+        coreWithEarliestTime.jobs.push(job);
+        captureQueueState(job.startTime, availableJobs);
       }
-
-      // Now select the job with the shortest burst time from available jobs
-      let jobToSchedule = availableJobs.sort((a, b) => a.burstTime - b.burstTime)[0];
-
-      // Schedule the selected job
-      jobToSchedule.startTime = Math.max(coreWithEarliestTime.currentTime, jobToSchedule.arrivalTime);
-      jobToSchedule.endTime = jobToSchedule.startTime + jobToSchedule.burstTime;
-      coreWithEarliestTime.currentTime = jobToSchedule.endTime;
-      coreWithEarliestTime.jobs.push(jobToSchedule);
-
-      // Remove the scheduled job from the list of jobs to schedule
-      jobsToSchedule = jobsToSchedule.filter(job => job.id !== jobToSchedule.id);
+      else {
+        // No jobs available yet, advance time to next job's arrival
+        let nextJobArrivalTime = Math.min(...jobsToSchedule.map(j => j.arrivalTime));
+        coreWithEarliestTime.currentTime = nextJobArrivalTime;
+        captureQueueState(coreWithEarliestTime.currentTime, []);
+      }
     }
   }
 
-  // Update the global jobs array with the scheduled jobs for UI update
+  // Reflect the scheduled jobs in the global array
   jobs = cores.flatMap(core => core.jobs);
 
-  // Update the UI
-  createTimelineGraphic();
+  // Update the UI and queue state table after scheduling
   updateUI();
+  updateQueueStateTable();
 }
 
 // Function to create a detailed timeline graphic
@@ -201,6 +193,54 @@ function getRandomColor() {
   return color;
 }
 
+// Record of queue states at different times
+function captureQueueState(currentTime, jobsToSchedule) {
+  let queueSnapshot = jobsToSchedule.map(job => ({ id: job.id, arrivalTime: job.arrivalTime, burstTime: job.burstTime }));
+  queueStates.push({ time: currentTime, queue: queueSnapshot });
+}
+
+// Update the queue state table
+function updateQueueStateTable() {
+  const container = document.getElementById('queue-state-container');
+  if (!container) {
+      console.log('Queue state container not found');
+      return;
+  }
+
+  // Clear existing content
+  container.innerHTML = '';
+
+  // Create the table and headers
+  const table = document.createElement('table');
+  const thead = document.createElement('thead');
+  const tbody = document.createElement('tbody');
+  table.appendChild(thead);
+  table.appendChild(tbody);
+
+  const headerRow = document.createElement('tr');
+  const timeHeader = document.createElement('th');
+  timeHeader.textContent = 'Time';
+  const queueHeader = document.createElement('th');
+  queueHeader.textContent = 'Jobs in Queue';
+  headerRow.appendChild(timeHeader);
+  headerRow.appendChild(queueHeader);
+  thead.appendChild(headerRow);
+
+  // Fill the table body with queue states
+  queueStates.forEach(state => {
+      const row = document.createElement('tr');
+      const timeCell = document.createElement('td');
+      const queueCell = document.createElement('td');
+      timeCell.textContent = state.time;
+      queueCell.textContent = state.queue.map(job => `${job.id}`).join(', ');
+      row.appendChild(timeCell);
+      row.appendChild(queueCell);
+      tbody.appendChild(row);
+  });
+
+  container.appendChild(table);
+}
+
 // Function to update the UI with the scheduled jobs
 function updateUI() {
   const tableBody = document.getElementById('jobs-table-body');
@@ -278,11 +318,6 @@ function setupEventListeners() {
 
   // Event listener for algorithm selection change
   document.getElementById('algorithm-select').addEventListener('change', function(event) {
-    // selectedAlgorithm = event.target.value;
-    // if (selectedAlgorithm) {
-    //     scheduleJobsMultiCore();
-    // }
-    // updateUI();
     selectedAlgorithm = event.target.value;
     scheduleJobsMultiCore(); // Reschedule jobs based on the new algorithm
     updateUI(); // Reflect changes in the UI
