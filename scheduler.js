@@ -60,54 +60,65 @@ function removeJob(jobId) {
 
 // Function to schedule jobs across multiple cores
 function scheduleJobsMultiCore() {
-  // Reset cores
+  // Reset and initialize cores
   initializeCores(numberOfCores);
-
-  // Create a deep copy of the jobs array to manipulate during scheduling
-  let jobsToSchedule = JSON.parse(JSON.stringify(jobs));
-  let currentTime = 0;
+  
+  // Sort jobs by arrival time initially for all algorithms
+  let jobsToSchedule = JSON.parse(JSON.stringify(jobs)).sort((a, b) => a.arrivalTime - b.arrivalTime);
 
   // Clear previous jobs from cores
-  cores.forEach(core => core.jobs = []);
-  cores.forEach(core => core.currentTime = 0);
+  cores.forEach(core => {
+    core.jobs = [];
+    core.currentTime = 0;
+  });
 
-  // Sort and schedule jobs based on the selected algorithm
+  // Handle FCFS scheduling
   if (selectedAlgorithm === 'fcfs') {
-    // Sort by arrival time for FCFS
-    jobsToSchedule.sort((a, b) => a.arrivalTime - b.arrivalTime);
-  } else if (selectedAlgorithm === 'sjf') {
-    // Sort by burst time for SJF, considering only jobs that have arrived
-    jobsToSchedule.sort((a, b) => {
-      if (a.arrivalTime <= currentTime && b.arrivalTime <= currentTime) {
-        return a.burstTime - b.burstTime;
-      }
-      return a.arrivalTime - b.arrivalTime;
+    jobsToSchedule.forEach(job => {
+      let coreWithEarliestTime = cores.reduce((earliest, current) => earliest.currentTime <= current.currentTime ? earliest : current);
+      job.startTime = Math.max(coreWithEarliestTime.currentTime, job.arrivalTime);
+      job.endTime = job.startTime + job.burstTime;
+      coreWithEarliestTime.currentTime = job.endTime;
+      coreWithEarliestTime.jobs.push(job);
     });
   }
 
-  // Assign jobs to cores based on the sorted order
-  jobsToSchedule.forEach(job => {
-    let coreWithEarliestTime = cores.reduce((earliest, current) => {
-      return (earliest.currentTime <= current.currentTime) ? earliest : current;
-    });
+  // Handle SJF scheduling
+  else if (selectedAlgorithm === 'sjf') {
+    while (jobsToSchedule.length > 0) {
+      let coreWithEarliestTime = cores.reduce((earliest, current) => earliest.currentTime <= current.currentTime ? earliest : current);
 
-    // Schedule the job on the core with the earliest available time
-    if (job.arrivalTime > coreWithEarliestTime.currentTime) {
-      coreWithEarliestTime.currentTime = job.arrivalTime;
+      // Find jobs that have arrived by the current time of the earliest core
+      let availableJobs = jobsToSchedule.filter(job => job.arrivalTime <= coreWithEarliestTime.currentTime);
+
+      // If no jobs are available yet, advance the time to the next job's arrival
+      if (availableJobs.length === 0) {
+        let nextJobArrival = Math.min(...jobsToSchedule.map(job => job.arrivalTime));
+        coreWithEarliestTime.currentTime = nextJobArrival;
+        availableJobs = jobsToSchedule.filter(job => job.arrivalTime <= coreWithEarliestTime.currentTime);
+      }
+
+      // Now select the job with the shortest burst time from available jobs
+      let jobToSchedule = availableJobs.sort((a, b) => a.burstTime - b.burstTime)[0];
+
+      // Schedule the selected job
+      jobToSchedule.startTime = Math.max(coreWithEarliestTime.currentTime, jobToSchedule.arrivalTime);
+      jobToSchedule.endTime = jobToSchedule.startTime + jobToSchedule.burstTime;
+      coreWithEarliestTime.currentTime = jobToSchedule.endTime;
+      coreWithEarliestTime.jobs.push(jobToSchedule);
+
+      // Remove the scheduled job from the list of jobs to schedule
+      jobsToSchedule = jobsToSchedule.filter(job => job.id !== jobToSchedule.id);
     }
-    job.startTime = coreWithEarliestTime.currentTime;
-    job.endTime = job.startTime + job.burstTime;
-    coreWithEarliestTime.currentTime = job.endTime;
-    coreWithEarliestTime.jobs.push(job);
-  });
+  }
 
-  // Update the global jobs array with the scheduled jobs
+  // Update the global jobs array with the scheduled jobs for UI update
   jobs = cores.flatMap(core => core.jobs);
 
-  // Update the timeline visualization
+  // Update the UI
   createTimelineGraphic();
+  updateUI();
 }
-
 
 // Function to create a detailed timeline graphic
 function createTimelineGraphic() {
@@ -267,11 +278,14 @@ function setupEventListeners() {
 
   // Event listener for algorithm selection change
   document.getElementById('algorithm-select').addEventListener('change', function(event) {
-      selectedAlgorithm = event.target.value;
-      if (selectedAlgorithm) {
-          scheduleJobsMultiCore();
-      }
-      updateUI();
+    // selectedAlgorithm = event.target.value;
+    // if (selectedAlgorithm) {
+    //     scheduleJobsMultiCore();
+    // }
+    // updateUI();
+    selectedAlgorithm = event.target.value;
+    scheduleJobsMultiCore(); // Reschedule jobs based on the new algorithm
+    updateUI(); // Reflect changes in the UI
   });
 
   // Event listener for CPU cores input change
@@ -293,3 +307,7 @@ if (document.readyState === 'loading') {
 } else {
   setupEventListeners();
 }
+
+
+
+
