@@ -70,6 +70,19 @@ function scheduleJobsMultiCore() {
     core.currentTime = 0;
   });
 
+  // Helper function to add or update queue states
+  function updateQueueStates(time, jobs) {
+    // Check if there's already a queue state for this time
+    let state = queueStates.find(s => s.time === time);
+    if (state) {
+      // Merge jobs with the existing queue
+      state.queue = [...new Set([...state.queue, ...jobs])];
+    } else {
+      // Create a new queue state
+      queueStates.push({ time: time, queue: [...jobs] });
+    }
+  }
+
   if (selectedAlgorithm === 'fcfs') {
     jobsToSchedule.forEach(job => {
       let coreWithEarliestTime = cores.reduce((earliest, current) => earliest.currentTime <= current.currentTime ? earliest : current);
@@ -77,10 +90,12 @@ function scheduleJobsMultiCore() {
       job.endTime = job.startTime + job.burstTime;
       coreWithEarliestTime.currentTime = job.endTime;
       coreWithEarliestTime.jobs.push(job);
-      captureQueueState(coreWithEarliestTime.currentTime, jobsToSchedule.filter(j => j.arrivalTime <= coreWithEarliestTime.currentTime));
+
+      // Capture the current state of the queue
+      let currentQueue = jobsToSchedule.filter(j => j.arrivalTime <= coreWithEarliestTime.currentTime && !coreWithEarliestTime.jobs.includes(j)).map(j => j.id);
+      updateQueueStates(job.startTime, currentQueue);
     });
-  }
-  else if (selectedAlgorithm === 'sjf') {
+  } else if (selectedAlgorithm === 'sjf') {
     while (jobsToSchedule.length > 0) {
       let coreWithEarliestTime = cores.reduce((earliest, current) => earliest.currentTime <= current.currentTime ? earliest : current);
       let availableJobs = jobsToSchedule.filter(j => j.arrivalTime <= coreWithEarliestTime.currentTime);
@@ -93,19 +108,23 @@ function scheduleJobsMultiCore() {
         job.endTime = job.startTime + job.burstTime;
         coreWithEarliestTime.currentTime = job.endTime;
         coreWithEarliestTime.jobs.push(job);
-        captureQueueState(job.startTime, availableJobs);
-      }
-      else {
+
+        // Update queue state
+        let currentQueue = jobsToSchedule.filter(j => j.arrivalTime <= coreWithEarliestTime.currentTime).map(j => j.id);
+        updateQueueStates(job.startTime, currentQueue);
+      } else {
         // No jobs available yet, advance time to next job's arrival
         let nextJobArrivalTime = Math.min(...jobsToSchedule.map(j => j.arrivalTime));
         coreWithEarliestTime.currentTime = nextJobArrivalTime;
-        captureQueueState(coreWithEarliestTime.currentTime, []);
       }
     }
   }
 
   // Reflect the scheduled jobs in the global array
   jobs = cores.flatMap(core => core.jobs);
+
+  // Sort queueStates by time to ensure chronological order
+  // queueStates.sort((a, b) => a.time - b.time);
 
   // Update the UI and queue state table after scheduling
   updateUI();
@@ -202,21 +221,16 @@ function captureQueueState(currentTime, jobsToSchedule) {
 // Update the queue state table
 function updateQueueStateTable() {
   const container = document.getElementById('queue-state-container');
-  if (!container) {
-      console.log('Queue state container not found');
-      return;
-  }
+  container.innerHTML = ''; // Clear existing content
 
-  // Clear existing content
-  container.innerHTML = '';
-
-  // Create the table and headers
   const table = document.createElement('table');
+  table.className = 'queue-state-table'; // Assign a class for styling
   const thead = document.createElement('thead');
   const tbody = document.createElement('tbody');
   table.appendChild(thead);
   table.appendChild(tbody);
 
+  // Creating table headers
   const headerRow = document.createElement('tr');
   const timeHeader = document.createElement('th');
   timeHeader.textContent = 'Time';
@@ -226,19 +240,36 @@ function updateQueueStateTable() {
   headerRow.appendChild(queueHeader);
   thead.appendChild(headerRow);
 
-  // Fill the table body with queue states
-  queueStates.forEach(state => {
-      const row = document.createElement('tr');
-      const timeCell = document.createElement('td');
-      const queueCell = document.createElement('td');
-      timeCell.textContent = state.time;
-      queueCell.textContent = state.queue.map(job => `${job.id}`).join(', ');
-      row.appendChild(timeCell);
-      row.appendChild(queueCell);
-      tbody.appendChild(row);
+  // Aggregate queue states by time to avoid duplicates
+  let aggregatedQueueStates = aggregateQueueStates(queueStates);
+
+  // Filling the table body with aggregated queue states
+  aggregatedQueueStates.forEach(({ time, queue }) => {
+    const row = document.createElement('tr');
+    const timeCell = document.createElement('td');
+    const queueCell = document.createElement('td');
+    timeCell.textContent = time;
+    queueCell.textContent = queue.join(', ');
+    row.appendChild(timeCell);
+    row.appendChild(queueCell);
+    tbody.appendChild(row);
   });
 
   container.appendChild(table);
+}
+
+// Helper function to aggregate queue states by time
+function aggregateQueueStates(queueStates) {
+  let aggregated = [];
+  queueStates.forEach(state => {
+    let existingState = aggregated.find(s => s.time === state.time);
+    if (existingState) {
+      existingState.queue = [...new Set([...existingState.queue, ...state.queue])];
+    } else {
+      aggregated.push({ ...state, queue: [...state.queue] });
+    }
+  });
+  return aggregated;
 }
 
 // Function to update the UI with the scheduled jobs
@@ -342,7 +373,3 @@ if (document.readyState === 'loading') {
 } else {
   setupEventListeners();
 }
-
-
-
-
