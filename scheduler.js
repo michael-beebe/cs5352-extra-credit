@@ -228,38 +228,63 @@ function updateUI() {
   createTimelineGraphic(); // Call function to create the timeline graphic
 }
 
+// Function to load a test scenario
+function loadTestScenario() {
+  // Define a test scenario with predefined jobs
+  const testJobs = [
+    { id: 'J1', arrivalTime: 0, burstTime: 30 },
+    { id: 'J2', arrivalTime: 0, burstTime: 10 },
+    { id: 'J3', arrivalTime: 0, burstTime: 20 },
+    { id: 'J4', arrivalTime: 8, burstTime: 15 },
+    { id: 'J5', arrivalTime: 16, burstTime: 7 },
+    { id: 'J6', arrivalTime: 18, burstTime: 4 }
+  ];
+
+  // Clear existing jobs
+  jobs = [];
+
+  // Add predefined jobs to the jobs array
+  testJobs.forEach(job => {
+    addJob(job.id, job.arrivalTime, job.burstTime);
+  });
+
+  // Update the UI with the new jobs
+  updateUI();
+  console.log("Test scenario loaded");
+}
+// Setup event listener for the Load Test Scenario button
+document.getElementById('load-test-scenario').addEventListener('click', loadTestScenario);
+
 // Setup event listeners
 function setupEventListeners() {
   // Event listener for the add job button
   document.getElementById('add-job').addEventListener('click', function() {
-    const id = document.getElementById('job-number').value;
-    const arrivalTime = parseInt(document.getElementById('arrival-time').value, 10);
-    const burstTime = parseInt(document.getElementById('burst-time').value, 10);
-    addJob(id, arrivalTime, burstTime);
+      const id = document.getElementById('job-number').value;
+      const arrivalTime = parseInt(document.getElementById('arrival-time').value, 10);
+      const burstTime = parseInt(document.getElementById('burst-time').value, 10);
+      addJob(id, arrivalTime, burstTime);
   });
 
   // Event listener for algorithm selection change
   document.getElementById('algorithm-select').addEventListener('change', function(event) {
-    selectedAlgorithm = event.target.value;
-    if (selectedAlgorithm) {
-      scheduleJobsMultiCore();
-    }
-    updateUI();
+      selectedAlgorithm = event.target.value;
+      if (selectedAlgorithm) {
+          scheduleJobsMultiCore();
+      }
+      updateUI();
   });
-  // document.getElementById('algorithm-select').addEventListener('change', function(event) {
-  //   selectedAlgorithm = event.target.value;
-  //   scheduleJobsMultiCore(); // Re-schedule jobs based on the new algorithm
-  //   updateUI(); // Update the table and timeline
-  // });
 
   // Event listener for CPU cores input change
   document.getElementById('cpu-cores').addEventListener('change', function(event) {
-    numberOfCores = parseInt(event.target.value, 10);
-    if (selectedAlgorithm) {
-      scheduleJobsMultiCore();
-    }
-    updateUI();
+      numberOfCores = parseInt(event.target.value, 10);
+      if (selectedAlgorithm) {
+          scheduleJobsMultiCore();
+      }
+      updateUI();
   });
+
+  // Event listener for the Load Test Scenario button
+  document.getElementById('load-test-scenario').addEventListener('click', loadTestScenario);
 }
 
 // Check if the DOM is fully loaded
