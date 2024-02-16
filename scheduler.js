@@ -64,11 +64,15 @@ function scheduleJobsMultiCore() {
   initializeCores(numberOfCores); // Reset and initialize cores
   queueStates = []; // Reset queue states before each scheduling
 
+  // Create a deep copy of jobs for scheduling without altering the original jobs order
   let jobsToSchedule = JSON.parse(JSON.stringify(jobs)).sort((a, b) => a.arrivalTime - b.arrivalTime);
   cores.forEach(core => {
     core.jobs = [];
     core.currentTime = 0;
   });
+
+  // Maintain a reference to the original jobs for updating times without reordering
+  let originalJobsReference = jobs.slice();
 
   // Helper function to add or update queue states
   function updateQueueStates(time, jobs) {
@@ -86,50 +90,124 @@ function scheduleJobsMultiCore() {
   if (selectedAlgorithm === 'fcfs') {
     jobsToSchedule.forEach(job => {
       let coreWithEarliestTime = cores.reduce((earliest, current) => earliest.currentTime <= current.currentTime ? earliest : current);
-      job.startTime = Math.max(coreWithEarliestTime.currentTime, job.arrivalTime);
-      job.endTime = job.startTime + job.burstTime;
-      coreWithEarliestTime.currentTime = job.endTime;
-      coreWithEarliestTime.jobs.push(job);
+      // Find the corresponding job in the original array to update its start and end times
+      let originalJob = originalJobsReference.find(oJob => oJob.id === job.id);
+      originalJob.startTime = Math.max(coreWithEarliestTime.currentTime, job.arrivalTime);
+      originalJob.endTime = originalJob.startTime + job.burstTime;
+      coreWithEarliestTime.currentTime = originalJob.endTime;
+      coreWithEarliestTime.jobs.push(originalJob);
 
       // Capture the current state of the queue
       let currentQueue = jobsToSchedule.filter(j => j.arrivalTime <= coreWithEarliestTime.currentTime && !coreWithEarliestTime.jobs.includes(j)).map(j => j.id);
-      updateQueueStates(job.startTime, currentQueue);
+      updateQueueStates(originalJob.startTime, currentQueue);
     });
   } else if (selectedAlgorithm === 'sjf') {
     while (jobsToSchedule.length > 0) {
       let coreWithEarliestTime = cores.reduce((earliest, current) => earliest.currentTime <= current.currentTime ? earliest : current);
       let availableJobs = jobsToSchedule.filter(j => j.arrivalTime <= coreWithEarliestTime.currentTime);
-
+      
       if (availableJobs.length > 0) {
-        let job = availableJobs.sort((a, b) => a.burstTime - b.burstTime)[0]; // Select job with the shortest burst time
-        jobsToSchedule = jobsToSchedule.filter(j => j.id !== job.id); // Remove the chosen job from the pool
-
-        job.startTime = Math.max(coreWithEarliestTime.currentTime, job.arrivalTime);
-        job.endTime = job.startTime + job.burstTime;
-        coreWithEarliestTime.currentTime = job.endTime;
-        coreWithEarliestTime.jobs.push(job);
+        let job = availableJobs.sort((a, b) => a.burstTime - b.burstTime)[0];
+        jobsToSchedule = jobsToSchedule.filter(j => j.id !== job.id);
+        // Update the corresponding job in the original array
+        let originalJob = originalJobsReference.find(oJob => oJob.id === job.id);
+        originalJob.startTime = Math.max(coreWithEarliestTime.currentTime, job.arrivalTime);
+        originalJob.endTime = originalJob.startTime + job.burstTime;
+        coreWithEarliestTime.currentTime = originalJob.endTime;
+        coreWithEarliestTime.jobs.push(originalJob);
 
         // Update queue state
         let currentQueue = jobsToSchedule.filter(j => j.arrivalTime <= coreWithEarliestTime.currentTime).map(j => j.id);
-        updateQueueStates(job.startTime, currentQueue);
+        updateQueueStates(originalJob.startTime, currentQueue);
       } else {
-        // No jobs available yet, advance time to next job's arrival
-        let nextJobArrivalTime = Math.min(...jobsToSchedule.map(j => j.arrivalTime));
-        coreWithEarliestTime.currentTime = nextJobArrivalTime;
+        // Advance time to next job's arrival if no jobs are available
+        let nextJobArrival = Math.min(...jobsToSchedule.map(j => j.arrivalTime));
+        coreWithEarliestTime.currentTime = nextJobArrival;
       }
     }
   }
 
-  // Reflect the scheduled jobs in the global array
-  jobs = cores.flatMap(core => core.jobs);
+  // No need to reorder jobs in the original jobs array
 
-  // Sort queueStates by time to ensure chronological order
-  // queueStates.sort((a, b) => a.time - b.time);
-
-  // Update the UI and queue state table after scheduling
+  // Update the UI to reflect changes
   updateUI();
   updateQueueStateTable();
 }
+
+
+// function scheduleJobsMultiCore() {
+//   initializeCores(numberOfCores); // Reset and initialize cores
+//   queueStates = []; // Reset queue states before each scheduling
+
+//   let jobsToSchedule = JSON.parse(JSON.stringify(jobs)).sort((a, b) => a.arrivalTime - b.arrivalTime);
+//   cores.forEach(core => {
+//     core.jobs = [];
+//     core.currentTime = 0;
+//   });
+
+//   // Maintain a reference to the original jobs for updating times without reordering
+//   let originalJobsReference = jobs.slice();
+
+//   // Helper function to add or update queue states
+//   function updateQueueStates(time, jobs) {
+//     // Check if there's already a queue state for this time
+//     let state = queueStates.find(s => s.time === time);
+//     if (state) {
+//       // Merge jobs with the existing queue
+//       state.queue = [...new Set([...state.queue, ...jobs])];
+//     } else {
+//       // Create a new queue state
+//       queueStates.push({ time: time, queue: [...jobs] });
+//     }
+//   }
+
+//   if (selectedAlgorithm === 'fcfs') {
+//     jobsToSchedule.forEach(job => {
+//       let coreWithEarliestTime = cores.reduce((earliest, current) => earliest.currentTime <= current.currentTime ? earliest : current);
+//       job.startTime = Math.max(coreWithEarliestTime.currentTime, job.arrivalTime);
+//       job.endTime = job.startTime + job.burstTime;
+//       coreWithEarliestTime.currentTime = job.endTime;
+//       coreWithEarliestTime.jobs.push(job);
+
+//       // Capture the current state of the queue
+//       let currentQueue = jobsToSchedule.filter(j => j.arrivalTime <= coreWithEarliestTime.currentTime && !coreWithEarliestTime.jobs.includes(j)).map(j => j.id);
+//       updateQueueStates(job.startTime, currentQueue);
+//     });
+//   } else if (selectedAlgorithm === 'sjf') {
+//     while (jobsToSchedule.length > 0) {
+//       let coreWithEarliestTime = cores.reduce((earliest, current) => earliest.currentTime <= current.currentTime ? earliest : current);
+//       let availableJobs = jobsToSchedule.filter(j => j.arrivalTime <= coreWithEarliestTime.currentTime);
+
+//       if (availableJobs.length > 0) {
+//         let job = availableJobs.sort((a, b) => a.burstTime - b.burstTime)[0]; // Select job with the shortest burst time
+//         jobsToSchedule = jobsToSchedule.filter(j => j.id !== job.id); // Remove the chosen job from the pool
+
+//         job.startTime = Math.max(coreWithEarliestTime.currentTime, job.arrivalTime);
+//         job.endTime = job.startTime + job.burstTime;
+//         coreWithEarliestTime.currentTime = job.endTime;
+//         coreWithEarliestTime.jobs.push(job);
+
+//         // Update queue state
+//         let currentQueue = jobsToSchedule.filter(j => j.arrivalTime <= coreWithEarliestTime.currentTime).map(j => j.id);
+//         updateQueueStates(job.startTime, currentQueue);
+//       } else {
+//         // No jobs available yet, advance time to next job's arrival
+//         let nextJobArrivalTime = Math.min(...jobsToSchedule.map(j => j.arrivalTime));
+//         coreWithEarliestTime.currentTime = nextJobArrivalTime;
+//       }
+//     }
+//   }
+
+//   // Reflect the scheduled jobs in the global array
+//   jobs = cores.flatMap(core => core.jobs);
+
+//   // Sort queueStates by time to ensure chronological order
+//   // queueStates.sort((a, b) => a.time - b.time);
+
+//   // Update the UI and queue state table after scheduling
+//   updateUI();
+//   updateQueueStateTable();
+// }
 
 // Function to create a detailed timeline graphic
 function createTimelineGraphic() {
@@ -276,38 +354,44 @@ function aggregateQueueStates(queueStates) {
 function updateUI() {
   const tableBody = document.getElementById('jobs-table-body');
   tableBody.innerHTML = ''; // Clear existing table rows
-  let totalTurnAroundTime = 0;
-  jobs.forEach(job => {
-    const row = tableBody.insertRow();
-    row.insertCell(0).textContent = job.id;
-    row.insertCell(1).textContent = job.arrivalTime;
-    row.insertCell(2).textContent = job.burstTime;
-    row.insertCell(3).textContent = job.startTime;
-    row.insertCell(4).textContent = job.endTime;
-    const turnAroundTime = job.endTime - job.arrivalTime;
-    row.insertCell(5).textContent = turnAroundTime; // Turn-around time
-    totalTurnAroundTime += turnAroundTime;
 
-    // Add a "Remove" button to each row
-    const removeButton = document.createElement('button');
-    removeButton.textContent = 'Remove';
-    removeButton.className = 'remove-job';
-    removeButton.dataset.jobId = job.id;
-    removeButton.onclick = function() {
-      removeJob(job.id);
-    };
-    const removeCell = row.insertCell(6);
-    removeCell.appendChild(removeButton);
+  let totalTurnAroundTime = 0;
+
+  // Directly use the jobs array to maintain the order of addition
+  jobs.forEach(job => {
+      const row = tableBody.insertRow();
+      row.insertCell(0).textContent = job.id;
+      row.insertCell(1).textContent = job.arrivalTime;
+      row.insertCell(2).textContent = job.burstTime;
+      // Ensure we use the scheduled start and end times if they exist
+      row.insertCell(3).textContent = job.startTime !== null ? job.startTime : '-';
+      row.insertCell(4).textContent = job.endTime !== null ? job.endTime : '-';
+      const turnAroundTime = job.endTime !== null ? job.endTime - job.arrivalTime : '-';
+      row.insertCell(5).textContent = turnAroundTime !== '-' ? turnAroundTime : 'Pending';
+      totalTurnAroundTime += job.endTime !== null ? turnAroundTime : 0;
+
+      // Add a "Remove" button to each row
+      const removeCell = row.insertCell(6);
+      const removeButton = document.createElement('button');
+      removeButton.textContent = 'Remove';
+      removeButton.onclick = function() { removeJob(job.id); };
+      removeCell.appendChild(removeButton);
   });
 
-  // Calculate and display the average turnaround time
-  const avgTurnAroundTime = totalTurnAroundTime / jobs.length;
-  const avgTurnAroundTimeRow = tableBody.insertRow();
-  avgTurnAroundTimeRow.insertCell(0).textContent = 'Average Turn-Around Time';
-  avgTurnAroundTimeRow.insertCell(1).colSpan = 5;
-  avgTurnAroundTimeRow.insertCell(1).textContent = avgTurnAroundTime.toFixed(2);
+  // Update the average turnaround time if applicable
+  const avgTurnAroundTime = jobs.filter(job => job.endTime !== null).length > 0
+      ? totalTurnAroundTime / jobs.filter(job => job.endTime !== null).length
+      : 0;
 
-  createTimelineGraphic(); // Call function to create the timeline graphic
+  if (jobs.filter(job => job.endTime !== null).length > 0) {
+      const avgRow = tableBody.insertRow();
+      avgRow.insertCell(0).textContent = 'Average Turn-Around Time';
+      avgRow.insertCell(1).colSpan = 10;
+      avgRow.insertCell(1).textContent = avgTurnAroundTime.toFixed(3);
+  }
+
+  // Remember to call createTimelineGraphic if it's part of the UI update logic
+  createTimelineGraphic();
 }
 
 // Function to load a test scenario
@@ -373,3 +457,4 @@ if (document.readyState === 'loading') {
 } else {
   setupEventListeners();
 }
+
